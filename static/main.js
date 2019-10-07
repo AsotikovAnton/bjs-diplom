@@ -44,7 +44,7 @@ class Profile {
     // Конвертация валют
     convertMoney({fromCurrency, targetCurrency, targetAmount}, callback) {
         return ApiConnector.convertMoney({fromCurrency, targetCurrency, targetAmount}, (err, data) => {
-            console.log(`Конвертация из ${fromCurrency} в ${targetAmount} ${targetCurrency}...`);
+            console.log(`Конвертация из ${fromCurrency} в ${targetCurrency}...`);
             callback(err, data);
         });
     }
@@ -95,27 +95,40 @@ function main() {
                             console.error("Ошибка добавления денег пользователю.");
                         } else {
                             console.log(`Зачислено ${money.amount} ${money.currency} пользователю ${Conor.username}.`);
-                            
-                            // Вот здесь непонятно, как должно всё работать? В случае удачного добавления денег на счёт вызовите метод конвертации денег из текущей валюты в Неткоины. Обратите внимание, что для корректной работы метода необходимо передавать уже конвертированную (целевую) сумму. Для вычисления конвертированной суммы получите курс текущей валюты к Неткоину с помощью функции получения курса валют с сервера.
-                            
-                            // exchangeRate((err, data) => {
-                            //     if (err) {
-                            //         console.error(`ошибка`);
-                            //     } else {
-                            //         console.log(`бла-бла`);
-                            //     }
-                            // });
-
-                            // это пока черновые наброски того, что будет дальше
-                            // const convert = {fromCurrency: money.currency, targetCurrency: "Netcoins", targetAmount: money.amount}
-                            // Conor.convertMoney(convert, (err, data) => {
-                            //     if (err) {
-                            //         console.error("Ошибка конвертации денег.");
-                            //     } else {
-                            //         console.log(`Конвертировано ${convert.targetAmount} ${convert.fromCurrency} в ${convert.targetCurrency}.`);
-                                    
-                            //     }
-                            // });
+                            exchangeRate((err, data) => {
+                                if (err) {
+                                    console.error("Ошибка при выявлении курса.");
+                                } else {
+                                    let result = data[7].USD_NETCOIN;
+                                    const convert = {
+                                        fromCurrency: money.currency,
+                                        targetCurrency: "NETCOIN",
+                                        targetAmount: result * money.amount
+                                    }
+                                    Conor.convertMoney(convert, (err, data) => {
+                                        if (err) {
+                                            console.error("Ошибка конвертации денег.");
+                                        } else {
+                                            console.log(`Конвертировано ${money.amount} ${convert.fromCurrency} в ${convert.targetAmount} ${convert.targetCurrency}.`);
+                                            Anton.createUser((err, data) => {
+                                                if (err) {
+                                                    console.error("Ошибка создания нового пользователя.");
+                                                } else {
+                                                    console.log(`Пользователь ${Anton.username} создан.`);
+                                                    const transfer = {to: "Grudge", amount: convert.targetAmount};
+                                                    Conor.transferMoney(transfer, (err, data) => {
+                                                        if (err) {
+                                                            console.error("Ошибка перевода денег.");
+                                                        } else {
+                                                            console.log(`Переведено ${transfer.amount} пользователю ${transfer.to}.`);
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
                         }
                     });
                 }
@@ -124,4 +137,4 @@ function main() {
     });
 }
 
-// main();
+main();
